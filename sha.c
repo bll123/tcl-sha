@@ -1,11 +1,14 @@
 /*
  * Copyright 2018 Brad Lanam Walnut Creek CA
+ *
+ * https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/shs/shabytetestvectors.zip
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <memory.h>
 #include <sys/stat.h>
+#include <string.h>
 
 #define bs32(x) \
     ((((x) << 24) & 0xff000000) \
@@ -72,6 +75,28 @@ typedef struct {
     0x8eb44a8768581511,
     0xdb0c2e0d64f98fa7,
     0x47b5481dbefa4fa4
+  };
+
+  static hash_t sha_h512_224_init[] = {
+    0x8c3d37c819544da2,
+    0x73e1996689dcd4d6,
+    0x1dfab7ae32ff9c82,
+    0x679dd514582f9fcf,
+    0x0f6d2b697bd44da8,
+    0x77e36f7304c48942,
+    0x3f9d85a86a1d36c8,
+    0x1112e6ad91d692a1
+  };
+
+  static hash_t sha_h512_256_init[] = {
+    0x22312194fc2bf72c,
+    0x9f555fa3c84c64c2,
+    0x2393b86b6f53b151,
+    0x963877195940eabd,
+    0x96283ee2a88effe3,
+    0xbe5e1e2553863992,
+    0x2b0199fc2c85b8aa,
+    0x0eb72ddc81c52ca2
   };
 
   static hash_t sha_k[] = {
@@ -292,7 +317,7 @@ fillChunk (shainfo_t *shainfo)
 }
 
 int
-shahash (size_t hsize, buff_t *buf, size_t blen, char *ret, char *fn)
+shahash (char *hsize, buff_t *buf, size_t blen, char *ret, char *fn)
 {
   hash_t      sha_h [SHA_VALSINHASH];
   hash_t      w [MAXLOOP];
@@ -300,31 +325,41 @@ shahash (size_t hsize, buff_t *buf, size_t blen, char *ret, char *fn)
   size_t      i;
   size_t      maxbuff = 0;
   hash_t      t1, t2;
-  int         last;
+  int         last, half;
   FILE        *fh = { (FILE *) NULL };
   struct stat statbuf;
   shainfo_t   shainfo;
 
   ret [SHA_CHARSINHASH*2] = '\0';
 #if BASEHASHSIZE == 512
-  if (hsize != 512 && hsize != 384) {
+  if (strcmp (hsize, "512") != 0 &&
+      strcmp (hsize, "384") != 0 &&
+      strcmp (hsize, "512/256") != 0 &&
+      strcmp (hsize, "512/224") != 0) {
     return 2;
   }
-  if (hsize == 512) {
+  if (strcmp (hsize, "384") == 0) {
+    memcpy (sha_h, sha_h384_init, sizeof (sha_h384_init));
+  }
+  if (strcmp (hsize, "512") == 0) {
     memcpy (sha_h, sha_h512_init, sizeof (sha_h512_init));
   }
-  if (hsize == 384) {
-    memcpy (sha_h, sha_h384_init, sizeof (sha_h384_init));
+  if (strcmp (hsize, "512/224") == 0) {
+    memcpy (sha_h, sha_h512_224_init, sizeof (sha_h512_init));
+  }
+  if (strcmp (hsize, "512/256") == 0) {
+    memcpy (sha_h, sha_h512_256_init, sizeof (sha_h512_init));
   }
 #endif
 #if BASEHASHSIZE == 256
-  if (hsize != 256 && hsize != 224) {
+  if (strcmp (hsize, "256") != 0 &&
+      strcmp (hsize, "224") != 0) {
     return 2;
   }
-  if (hsize == 256) {
+  if (strncmp (hsize, "256", 3) == 0) {
     memcpy (sha_h, sha_h256_init, sizeof (sha_h256_init));
   }
-  if (hsize == 224) {
+  if (strcmp (hsize, "224") == 0) {
     memcpy (sha_h, sha_h224_init, sizeof (sha_h224_init));
   }
 #endif
@@ -410,10 +445,28 @@ shahash (size_t hsize, buff_t *buf, size_t blen, char *ret, char *fn)
     fclose (fh);
   }
 
+  half = 0;
   for (i = 0; i < SHA_VALSINHASH; ++i) {
-    if (hsize == 224 && i == 7) { continue; }
-    if (hsize == 384 && (i == 6 || i == 7)) { continue; }
+    if (strcmp (hsize, "224") == 0 && i == 7) {
+      break;
+    }
+    if (strcmp (hsize, "512/224") == 0 && i > 3) {
+      break;
+    }
+    if (strcmp (hsize, "512/224") == 0 && i == 3) {
+      half = 1;
+    }
+    if (strcmp (hsize, "512/256") == 0 && i > 3) {
+      break;
+    }
+    if (strcmp (hsize, "384") == 0 && i > 5) {
+      break;
+    }
+
     sprintf (ret+(i*sizeof(hash_t)*2), SHAFMT, sha_h[i]);
+    if (half) {
+      *(ret+((i+1)*sizeof(hash_t)*2)-8) = '\0';
+    }
   }
   ret [SHA_CHARSINHASH*2] = '\0';
   return 0;

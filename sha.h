@@ -21,6 +21,6 @@
 #define SHA_DIGESTSIZE (SHA_CHARSINHASH*2+1)
 typedef unsigned char buff_t;
 
-int shahash (size_t hsize, buff_t *buf, size_t blen, char *ret, char *fn);
+int shahash (char *hsize, buff_t *buf, size_t blen, char *ret, char *fn);
 
 #endif

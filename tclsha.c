@@ -25,7 +25,8 @@ shaObjCmd (
   char              *buf;
   char              *fn;
   int               len;
-  int               sz;
+  char              *sz;
+  int               szlen;
   int               rc;
   unsigned int      msz;
   char              dstr [SHA_DIGESTSIZE];
@@ -40,16 +41,21 @@ shaObjCmd (
     return TCL_ERROR;
   }
 
-  Tcl_GetIntFromObj (interp, objv[1], &sz);
+  sz = Tcl_GetStringFromObj (objv[1], &szlen);
+  if (szlen != 3 && szlen != 7) {
+    Tcl_WrongNumArgs (interp, 1, objv, "hashsize {-file fn|string}");
+    return TCL_ERROR;
+  }
+
   rc = TCL_ERROR;
   if (strcmp (buf, "-file") == 0) {
     msz = 1024 * 1024 * 5;
     buf = Tcl_Alloc (msz);
     fn = Tcl_GetStringFromObj (objv[3], &len);
-    rc = shahash ((size_t) sz, (buff_t *) buf, (size_t) msz, dstr, fn);
+    rc = shahash (sz, (buff_t *) buf, (size_t) msz, dstr, fn);
     Tcl_Free (buf);
   } else {
-    rc = shahash ((size_t) sz, (buff_t *) buf, (size_t) len, dstr, NULL);
+    rc = shahash (sz, (buff_t *) buf, (size_t) len, dstr, NULL);
   }
   if (rc == 0) {
     Tcl_SetObjResult (interp, Tcl_NewStringObj(dstr, -1));
@@ -69,6 +75,6 @@ Sha_Init (Tcl_Interp *interp)
   }
 
   Tcl_CreateObjCommand (interp, "sha", shaObjCmd, NULL, NULL);
-  Tcl_PkgProvide (interp, "sha", "0.1");
+  Tcl_PkgProvide (interp, "sha", "0.2");
   return TCL_OK;
 }

@@ -17,10 +17,10 @@ int
 main (int argc, char *argv[]) {
   char *buf = argv[2];
   char ret [SHA_CHARSINHASH*2+1];
-  size_t sz;
+  char *sz;
   size_t msz;
 
-  sz = (size_t) atol(argv[1]);
+  sz = argv[1];
   if (strcmp (buf, "-file") == 0) {
     msz = 1024 * 1024 * 5;
     buf = malloc (msz);
