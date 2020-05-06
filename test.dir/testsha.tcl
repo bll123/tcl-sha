@@ -1,11 +1,5 @@
 #!/usr/bin/tclsh
 
-set ap [file normalize [file join [file dirname [info script]] ..]]
-if { $ap ni $::auto_path } {
-  lappend ::auto_path $ap
-}
-unset ap
-
 proc htob {hex} {
   set val [binary format H* $hex]
   return $val
@@ -110,11 +104,11 @@ proc main { } {
   }
 
   if { $testb == 256 } {
-    package require sha256
+    load [file join .. sha256[info sharedlibextension]]
     set tlist [list 256 224]
   }
   if { $testb == 512 } {
-    package require sha
+    load [file join .. sha[info sharedlibextension]]
     set tlist [list 512 384 512_224 512_256]
   }
 
@@ -135,21 +129,6 @@ proc main { } {
 
   if { $verbose } {
     puts ""
-  }
-
-  if { $testb == 512 } {
-    set msg [htob 610061]
-    set nmd [sha -bits 512 -data $msg]
-    set md 55e7774d4d2c27e0d7ca954e7c89e7b0793a1045b99258ba62326af698fdb69ed538053c2d822b6af706e45a8f1b1fb9d5eeb542c3d0d36c074184c6e65ffb90
-    if { $nmd ne $md } {
-      puts "data fail: 610061"
-    }
-    set msg [htob 00]
-    set nmd [sha -bits 512 -data $msg]
-    set md b8244d028981d693af7b456af8efa4cad63d282e19ff14942c246e50d9351d22704a802a71c3580b6370de4ceb293c324a8423342557d4e5c38438f0e36910ee
-    if { $nmd ne $md } {
-      puts "data fail: 00"
-    }
   }
 
   foreach {b} $tlist {

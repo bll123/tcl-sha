@@ -7,7 +7,9 @@
 #include <stdint.h>
 
 /* one of 256, 512 */
-#define BASEHASHSIZE 512
+#if ! defined(BASEHASHSIZE)
+# define BASEHASHSIZE 512
+#endif
 
 #if BASEHASHSIZE == 512
   typedef uint64_t hash_t;

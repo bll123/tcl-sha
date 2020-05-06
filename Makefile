@@ -3,19 +3,19 @@
 #
 
 CFLAGS_OPT = -O2
-VER = 8.6
-SVER = 86
+TCLVER = 8.6
+STCLVER = 86
 BITS=64
 
-LINUXTGTS = tsha sha.so
+LINUXTGTS = sha.so sha256.so
 LINC = -I${HOME}/local/include
 LLIB = -L${HOME}/local/lib
 
-DARWINTGTS = tsha sha.dylib
+DARWINTGTS = sha.dylib sha256.dylib
 DINC = -I${HOME}/local/include
 DLIB = -L${HOME}/local/Library/Frameworks/Tcl.Framework/Versions/$(VER)
 
-WINTGTS = tsha.exe sha.dll
+WINTGTS = sha.dll sha256.dll
 
 .PHONY: unknown
 unknown:
@@ -60,7 +60,7 @@ windowstgt:
 
 .PHONY: clean
 clean:
-	@-rm -f *.o *.so *.dylib *.dll *.exe tsha *~
+	@-rm -f *.o *.so *.dylib *.dll *.exe *~ test.dir/*~
 
 .PHONY: distclean
 distclean:
@@ -74,18 +74,20 @@ tclsha.c:		sha.h
 	$(CC) -c $(CFLAGS_OPT) $(CFLAGS) \
 		-m${BITS} -fPIC -o $@ $(INCS) $<
 
+# objects
+sha256.o:	sha.c
+	$(CC) -c $(CFLAGS_OPT) $(CFLAGS) -DBASEHASHSIZE=256 \
+		-m${BITS} -fPIC -o $@ $(INCS) $<
+
 # all
-sha$(SFX):	tclsha.o sha.o 
+sha$(SFX):	tclsha.o sha.o
 	$(CC) $(CFLAGS_OPT) $(LDFLAGS) \
 		-m${BITS} -shared -fPIC -o $@ \
 		tclsha.o sha.o \
         	$(LIBS) -ltclstub${TCLVER}
-tsha:	tsha.o sha.o
-	$(CC) $(CFLAGS_OPT) $(LDFLAGS) \
-		-m${BITS} -fPIC -o $@ \
-		tsha.o sha.o $(LIBS)
 
-# windows
-tsha.exe:	tsha.o sha.o
+sha256$(SFX):	tclsha.o sha256.o
 	$(CC) $(CFLAGS_OPT) $(LDFLAGS) \
-		-m${BITS} -fPIC -o $@ tsha.o sha.o
+		-m${BITS} -shared -fPIC -o $@ \
+		tclsha.o sha256.o \
+        	$(LIBS) -ltclstub${TCLVER}

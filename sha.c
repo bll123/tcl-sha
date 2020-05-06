@@ -1,8 +1,10 @@
 /*
  * Copyright 2018 Brad Lanam Walnut Creek CA
+ * Copyright 2020 Brad Lanam Pleasant Hill CA
  *
  * https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/shs/shabytetestvectors.zip
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -361,6 +363,30 @@ shahash (char *hsize, buff_t *buf, size_t blen, char *ret, char *fn)
   }
   if (strcmp (hsize, "224") == 0) {
     memcpy (sha_h, sha_h224_init, sizeof (sha_h224_init));
+  }
+#endif
+
+/*
+ * If Tcl null handling is wanted, turn this block on.
+ * However, other binary data within a Tcl string will not be processed
+ * properly.
+ */
+#if 0
+  if (fn == (char *) NULL) {
+    int     i, rlen;
+
+    i = 0;
+    while (i < blen - 1) {
+      if (buf[i] == 0xc0 && buf[i+1] == 0x80) {
+        buf[i] = 0x00;
+        --blen;
+        rlen = blen - i - 1;
+        if (rlen > 0) {
+          memcpy (buf+i+1, buf+i+2, rlen);
+        }
+      }
+      ++i;
+    }
   }
 #endif
 
