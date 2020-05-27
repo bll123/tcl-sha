@@ -302,7 +302,7 @@ dump (char *msg, buff_t *buf, size_t len)
 
 
 static inline int
-fillChunk (shainfo_t *shainfo, char *predata)
+fillChunk (shainfo_t *shainfo, buff_t *predata)
 {
   size_t        copylen = CHARSINCHUNK;
   size_t        coffset;
@@ -347,8 +347,8 @@ fillChunk (shainfo_t *shainfo, char *predata)
 }
 
 int
-shahash (char *hsize, buff_t *buf, size_t blen, buff_t *predata,
-    char *fn, int flags, buff_t *ret, size_t *rlen)
+shahash (char *hsize, char *buf, size_t blen, buff_t *predata,
+    char *fn, int flags, char *ret, size_t *rlen)
 {
   hash_t      sha_h [SHA_VALSINHASH];
   hash_t      w [MAXLOOP];
@@ -403,7 +403,7 @@ shahash (char *hsize, buff_t *buf, size_t blen, buff_t *predata,
   shainfo.foffset = 0;
   shainfo.blen = blen;
   shainfo.boffset = 0;
-  shainfo.buf = buf;
+  shainfo.buf = (buff_t *) buf;
   shainfo.chunk = (buff_t *) w;
 
   if ((flags & SHA_HAVEFILE) == SHA_HAVEFILE && fn != NULL) {
@@ -413,7 +413,7 @@ shahash (char *hsize, buff_t *buf, size_t blen, buff_t *predata,
     if (buf == NULL) {
       return 1;
     }
-    shainfo.buf = buf;
+    shainfo.buf = (buff_t *) buf;
     flags |= SHA_BUFFER_ALLOC;
     fh = fopen (fn, "rb");
     if (fh == (FILE *) NULL) {
@@ -573,8 +573,8 @@ hmacpad (buff_t *key, buff_t xorvalue, buff_t *ret)
 }
 
 int
-hmac (char *hsize, buff_t *buf, size_t blen, buff_t *inkey, size_t inklen,
-    char *fn, int flags, buff_t *ret, size_t *rlen)
+hmac (char *hsize, char *buf, size_t blen, char *inkey, size_t inklen,
+    char *fn, int flags, char *ret, size_t *rlen)
 {
   int           rc;
   buff_t        key [CHARSINCHUNK];
@@ -606,7 +606,7 @@ hmac (char *hsize, buff_t *buf, size_t blen, buff_t *inkey, size_t inklen,
       printf ("hmac: %d > %d : key by hash \n", statbuf.st_size, CHARSINCHUNK);
 #endif
       flags |= SHA_RETURN_RAW;
-      shahash (hsize, inkey, 0, NULL, inkey, flags, key, &klen);
+      shahash (hsize, inkey, 0, NULL, inkey, flags, (char *) key, &klen);
       flags &= ~SHA_RETURN_RAW;
     } else {
 #if SHA_DEBUG
@@ -629,7 +629,7 @@ hmac (char *hsize, buff_t *buf, size_t blen, buff_t *inkey, size_t inklen,
   hmacpad (key, 0x5c, okey);
   predata = ikey;
   flags |= SHA_RETURN_RAW;
-  rc = shahash (hsize, buf, blen, predata, fn, flags, key, rlen);
+  rc = shahash (hsize, buf, blen, predata, fn, flags, (char *) key, rlen);
 #if SHA_DEBUG
   printf ("hmac-ret len: %d\n", *rlen);
   dump ("hmac-ret", key, *rlen);
@@ -639,6 +639,6 @@ hmac (char *hsize, buff_t *buf, size_t blen, buff_t *inkey, size_t inklen,
   flags &= ~SHA_RETURN_RAW;
   flags &= ~SHA_HAVEFILE;
   flags |= SHA_HAVEDATA;
-  rc = shahash (hsize, key, *rlen, predata, fn, flags, ret, rlen);
+  rc = shahash (hsize, (char *) key, *rlen, predata, fn, flags, ret, rlen);
   return rc;
 }

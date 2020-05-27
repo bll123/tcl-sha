@@ -34,10 +34,10 @@ typedef unsigned char buff_t;
 #define SHA_HAVEBITS     0x00000010
 #define SHA_BUFFER_ALLOC 0x00000020
 
-int shahash (char *hsize, buff_t *buf, size_t blen, buff_t *predata,
-    char *fn, int flags, buff_t *ret, size_t *rlen);
-int hmac (char *hsize, buff_t *buf, size_t blen,
-    buff_t *inkey, size_t inklen,
-    char *fn, int flags, buff_t *ret, size_t *rlen);
+int shahash (char *hsize, char *buf, size_t blen, buff_t *predata,
+    char *fn, int flags, char *ret, size_t *rlen);
+int hmac (char *hsize, char *buf, size_t blen,
+    char *inkey, size_t inklen,
+    char *fn, int flags, char *ret, size_t *rlen);
 
 #endif

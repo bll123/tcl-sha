@@ -26,9 +26,9 @@ shaObjCmd (
   Tcl_Obj * const objv[]
   )
 {
-  buff_t            *buf;         /* temporary string buffer            */
-  buff_t            *dbuf;        /* data buffer                        */
-  buff_t            *key;         /* key data specified by -key (hmac)  */
+  char              *buf;         /* temporary string buffer            */
+  char              *dbuf;        /* data buffer                        */
+  char              *key;         /* key data specified by -key (hmac)  */
   char              *fn;          /* filename specified by -file        */
   int               len;
   char              *sz;          /* hash type, number of bits          */
@@ -41,7 +41,7 @@ shaObjCmd (
   int               rettype;
   int               flags;
   size_t            msz;
-  buff_t            dstr [SHA_DIGESTSIZE];
+  char              dstr [SHA_DIGESTSIZE];
   size_t            dlen;
   const char        *usagestr =
       "-bits <bits> [{-key <key>|-keyfile <fn>} -mac hmac] {-file <fn>|-data <string>}";
