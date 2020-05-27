@@ -12,13 +12,15 @@
 #include <sys/stat.h>
 #include <string.h>
 
+#define SHA_DEBUG 0
+
 #define bs32(x) \
-    ((((x) << 24) & 0xff000000) \
-    | (((x) << 8) & 0xff0000) \
-    | (((x) >> 8) & 0xff00) \
-    | (((x) >> 24) & 0xff ))
+    ( (((x) << 24) & 0xff000000) \
+    | (((x) <<  8) & 0x00ff0000) \
+    | (((x) >>  8) & 0x0000ff00) \
+    | (((x) >> 24) & 0x000000ff ))
 #define bs64(x) \
-    ((((x) & 0xff00000000000000ull) >> 56) \
+    ( (((x) & 0xff00000000000000ull) >> 56) \
     | (((x) & 0x00ff000000000000ull) >> 40) \
     | (((x) & 0x0000ff0000000000ull) >> 24) \
     | (((x) & 0x000000ff00000000ull) >> 8) \
@@ -30,9 +32,6 @@
 #include "sha.h"
 
 #define IS_BIG_ENDIAN (!*(unsigned char*)(void*)&(uint16_t){1})
-#define VALSINCHUNK 16
-#define CHARSINCHUNK (sizeof(hash_t)*VALSINCHUNK)
-#define BITSIZE (sizeof(hash_t)*8)
 #define LASTSIZE (sizeof(uint64_t)*(BASEHASHSIZE/256))
 
 #define RR(a,b,c) (((a) >> (b)) | ((a) << ((c)-(b))))
@@ -41,6 +40,7 @@
 
 typedef struct {
   size_t      flen;     /* actual length        */
+  size_t      aflen;    /* adjusted length      */
   size_t      foffset;  /* actual offset        */
   size_t      blen;     /* length of buffer     */
   size_t      boffset;  /* offset into buffer   */
@@ -51,7 +51,7 @@ typedef struct {
 #if BASEHASHSIZE == 512
 
 # define SHAFMT "%016llx"
-# define bs bs64
+# define bs bs64    /* the bs macro is for use on hash_t */
 
 # define SIG0(x) (RR(x,1,64) ^ RR(x,8,64) ^ ((x) >> 7))
 # define SIG1(x) (RR(x,19,64) ^ RR(x,61,64) ^ ((x) >> 6))
@@ -188,7 +188,7 @@ typedef struct {
 #if BASEHASHSIZE == 256
 
 # define SHAFMT "%08x"
-# define bs bs32
+# define bs bs32   /* the bs macro is for use on hash_t */
 
 # define SIG0(x) (RR(x,7,32) ^ RR(x,18,32) ^ ((x) >> 3))
 # define SIG1(x) (RR(x,17,32) ^ RR(x,19,32) ^ ((x) >> 10))
@@ -285,8 +285,24 @@ typedef struct {
 #endif
 #define MAXLOOP (sizeof(sha_k)/sizeof(hash_t))
 
+#if SHA_DEBUG
+
+static void
+dump (char *msg, buff_t *buf, size_t len)
+{
+  printf ("%s: ", msg);
+  for (int i = 0; i < len; ++i) {
+    printf ("%02x", buf[i]);
+  }
+  printf ("\n");
+  fflush (stdout);
+}
+
+#endif
+
+
 static inline int
-fillChunk (shainfo_t *shainfo)
+fillChunk (shainfo_t *shainfo, char *predata)
 {
   size_t        copylen = CHARSINCHUNK;
   size_t        coffset;
@@ -294,6 +310,15 @@ fillChunk (shainfo_t *shainfo)
   uint64_t      nlen;
   long          left;
 
+
+  if (predata != NULL) {
+    memcpy (shainfo->chunk, predata, CHARSINCHUNK);
+#if SHA_DEBUG
+    dump ("fc:predata", shainfo->chunk, CHARSINCHUNK);
+#endif
+    shainfo->aflen += CHARSINCHUNK;
+    return last;
+  }
 
   left = (long) (shainfo->flen - shainfo->foffset);
   if ( left < (long) CHARSINCHUNK ) {
@@ -305,7 +330,7 @@ fillChunk (shainfo_t *shainfo)
     }
     if (CHARSINCHUNK - copylen - 1 >= LASTSIZE) {
       /* 512/384 actually use a 128 bit value */
-      nlen = (uint64_t) shainfo->flen * 8;
+      nlen = (uint64_t) shainfo->aflen * 8;
       if ( ! IS_BIG_ENDIAN ) {
         nlen = bs64 (nlen);
       }
@@ -315,24 +340,31 @@ fillChunk (shainfo_t *shainfo)
   }
 
   memcpy (shainfo->chunk, shainfo->buf + shainfo->boffset, copylen);
+#if SHA_DEBUG
+  dump ("fc:chunk", shainfo->chunk, CHARSINCHUNK);
+#endif
   return last;
 }
 
 int
-shahash (char *hsize, buff_t *buf, size_t blen, char *ret, char *fn)
+shahash (char *hsize, buff_t *buf, size_t blen, buff_t *predata,
+    char *fn, int flags, buff_t *ret, size_t *rlen)
 {
   hash_t      sha_h [SHA_VALSINHASH];
   hash_t      w [MAXLOOP];
   hash_t      a, b, c, d, e, f, g, h;
-  size_t      i;
-  size_t      maxbuff = 0;
   hash_t      t1, t2;
+  size_t      i;
+  size_t      maxbuff = 1024 * 1024 * 5;
+  hash_t      *ptr;               /* used for return_raw */
   int         last, half;
-  FILE        *fh = { (FILE *) NULL };
-  struct stat statbuf;
   shainfo_t   shainfo;
+  FILE        *fh = NULL;
 
-  ret [SHA_CHARSINHASH*2] = '\0';
+  if ((flags & SHA_RETURN_RAW) != SHA_RETURN_RAW) {
+    ret [0] = '\0';
+    ret [SHA_CHARSINHASH * 2] = '\0';
+  }
 #if BASEHASHSIZE == 512
   if (strcmp (hsize, "512") != 0 &&
       strcmp (hsize, "384") != 0 &&
@@ -366,60 +398,52 @@ shahash (char *hsize, buff_t *buf, size_t blen, char *ret, char *fn)
   }
 #endif
 
-/*
- * If Tcl null handling is wanted, turn this block on.
- * However, other binary data within a Tcl string will not be processed
- * properly.
- */
-#if 0
-  if (fn == (char *) NULL) {
-    int     i, rlen;
-
-    i = 0;
-    while (i < blen - 1) {
-      if (buf[i] == 0xc0 && buf[i+1] == 0x80) {
-        buf[i] = 0x00;
-        --blen;
-        rlen = blen - i - 1;
-        if (rlen > 0) {
-          memcpy (buf+i+1, buf+i+2, rlen);
-        }
-      }
-      ++i;
-    }
-  }
-#endif
-
   shainfo.flen = blen;
+  shainfo.aflen = blen;
   shainfo.foffset = 0;
   shainfo.blen = blen;
   shainfo.boffset = 0;
   shainfo.buf = buf;
   shainfo.chunk = (buff_t *) w;
 
-  if (fn != (char *) NULL) {
-    maxbuff = blen;
+  if ((flags & SHA_HAVEFILE) == SHA_HAVEFILE && fn != NULL) {
+    struct stat statbuf;
+
+    buf = malloc (maxbuff);
+    if (buf == NULL) {
+      return 1;
+    }
+    shainfo.buf = buf;
+    flags |= SHA_BUFFER_ALLOC;
     fh = fopen (fn, "rb");
     if (fh == (FILE *) NULL) {
-      return 1;
+      free (buf);
+      flags &= ~SHA_BUFFER_ALLOC;
+      return 3;
     }
     stat (fn, &statbuf);
     shainfo.flen = (size_t) statbuf.st_size;
+    shainfo.aflen = shainfo.flen;
     shainfo.blen = fread (buf, 1, maxbuff, fh);
   }
 
   do {
-    last = fillChunk (&shainfo);
+    last = fillChunk (&shainfo, predata);
     if ( ! IS_BIG_ENDIAN ) {
       for (i = 0; i < VALSINCHUNK; ++i) {
         w[i] = bs (w[i]);
       }
     }
-    shainfo.boffset += CHARSINCHUNK;
-    shainfo.foffset += CHARSINCHUNK;
+    if (predata == NULL) {
+      shainfo.boffset += CHARSINCHUNK;
+      shainfo.foffset += CHARSINCHUNK;
+    }
+
     /* if the buffer is getting empty, move what's left to
        the beginning and fill it up again */
-    if (fn != (char *) NULL && shainfo.blen - shainfo.boffset < CHARSINCHUNK) {
+    if (predata == NULL &&
+        fn != NULL &&
+        shainfo.blen - shainfo.boffset < CHARSINCHUNK) {
       i = shainfo.blen - shainfo.boffset;
       if (i > 0) {
         memmove (buf, buf + shainfo.boffset, i);
@@ -465,13 +489,20 @@ shahash (char *hsize, buff_t *buf, size_t blen, char *ret, char *fn)
     sha_h[5] += f;
     sha_h[6] += g;
     sha_h[7] += h;
+
+    predata = NULL;
   } while (last == 0);
 
-  if (fn != (char *) NULL) {
+  if ((flags & SHA_HAVEFILE) == SHA_HAVEFILE && fn != NULL) {
     fclose (fh);
   }
 
+  if ((flags & SHA_RETURN_RAW) == SHA_RETURN_RAW) {
+    ptr = (hash_t *) ret;
+  }
+
   half = 0;
+  *rlen = 0;
   for (i = 0; i < SHA_VALSINHASH; ++i) {
     if (strcmp (hsize, "224") == 0 && i == 7) {
       break;
@@ -489,11 +520,125 @@ shahash (char *hsize, buff_t *buf, size_t blen, char *ret, char *fn)
       break;
     }
 
-    sprintf (ret+(i*sizeof(hash_t)*2), SHAFMT, sha_h[i]);
-    if (half) {
-      *(ret+((i+1)*sizeof(hash_t)*2)-8) = '\0';
+    if ((flags & SHA_RETURN_RAW) == SHA_RETURN_RAW) {
+      if ( ! IS_BIG_ENDIAN ) {
+        *(ptr+i) = bs (sha_h[i]);
+      } else {
+        *(ptr+i) = sha_h[i];
+      }
+    } else {
+      sprintf (ret+(i*sizeof(hash_t)*2), SHAFMT, sha_h[i]);
+      if (half) {
+        *(ret+((i+1)*sizeof(hash_t)*2)-8) = '\0';
+      }
     }
+    ++*rlen;
   }
-  ret [SHA_CHARSINHASH*2] = '\0';
+#if SHA_DEBUG
+  if ((flags & SHA_RETURN_RAW) == SHA_RETURN_RAW) {
+    printf ("rlen-a: %d\n", *rlen);
+  }
+#endif
+  *rlen *= sizeof (hash_t);
+
+#if SHA_DEBUG
+  if ((flags & SHA_RETURN_RAW) == SHA_RETURN_RAW) {
+    printf ("rlen-b: %d\n", *rlen);
+    dump ("ret-raw", ret, *rlen);
+  }
+#endif
+
+  if ((flags & SHA_RETURN_RAW) != SHA_RETURN_RAW) {
+    ret [SHA_CHARSINHASH*2] = '\0';
+  }
+  if ((flags & SHA_BUFFER_ALLOC) == SHA_BUFFER_ALLOC) {
+    free (buf);
+    flags &= ~SHA_BUFFER_ALLOC;
+  }
   return 0;
+}
+
+static void
+hmacpad (buff_t *key, buff_t xorvalue, buff_t *ret)
+{
+  FILE        *fh;
+
+  memcpy (ret, key, CHARSINCHUNK);
+  for (int i = 0; i < CHARSINCHUNK; ++i) {
+    ret[i] ^= xorvalue;
+  }
+#if SHA_DEBUG
+  dump ("hmac-key", ret, CHARSINCHUNK);
+#endif
+}
+
+int
+hmac (char *hsize, buff_t *buf, size_t blen, buff_t *inkey, size_t inklen,
+    char *fn, int flags, buff_t *ret, size_t *rlen)
+{
+  int           rc;
+  buff_t        key [CHARSINCHUNK];
+  buff_t        ikey [CHARSINCHUNK];
+  buff_t        okey [CHARSINCHUNK];
+  buff_t        *predata;
+  buff_t        *dbuf;
+  size_t        klen;
+
+  memset (key, '\0', CHARSINCHUNK);
+  memset (ret, '\0', CHARSINCHUNK);
+  if ((flags & SHA_KEYISFILE) == SHA_KEYISFILE) {
+    FILE        *fh;
+    struct stat statbuf;
+
+#if SHA_DEBUG
+    printf ("keyfile: %s\n", inkey);
+#endif
+    fh = fopen (inkey, "rb");
+    if (fh == (FILE *) NULL) {
+      return 1;
+    }
+    stat (inkey, &statbuf);
+    if ((size_t) statbuf.st_size > CHARSINCHUNK) {
+      size_t      rlen;
+      buff_t      *tbuf;
+
+#if SHA_DEBUG
+      printf ("hmac: %d > %d : key by hash \n", statbuf.st_size, CHARSINCHUNK);
+#endif
+      flags |= SHA_RETURN_RAW;
+      shahash (hsize, inkey, 0, NULL, inkey, flags, key, &klen);
+      flags &= ~SHA_RETURN_RAW;
+    } else {
+#if SHA_DEBUG
+      printf ("key from file\n");
+#endif
+      int flen = fread (key, 1, CHARSINCHUNK, fh);
+    }
+    fclose (fh);
+  } else {
+#if SHA_DEBUG
+    printf ("key from data\n");
+#endif
+    memcpy (key, inkey, inklen);
+  }
+#if SHA_DEBUG
+  dump ("key", key, CHARSINCHUNK);
+#endif
+
+  hmacpad (key, 0x36, ikey);
+  hmacpad (key, 0x5c, okey);
+  predata = ikey;
+  flags |= SHA_RETURN_RAW;
+  rc = shahash (hsize, buf, blen, predata, fn, flags, key, rlen);
+#if SHA_DEBUG
+  printf ("hmac-ret len: %d\n", *rlen);
+  dump ("hmac-ret", key, *rlen);
+#endif
+
+  predata = okey;
+  flags &= ~SHA_RETURN_RAW;
+  flags &= ~SHA_HAVEFILE;
+  flags |= SHA_HAVEDATA;
+  rc = shahash (hsize, key, *rlen, predata, fn, flags, ret, rlen);
+  return rc;
 }

@@ -1,4 +1,4 @@
-set shaver 1.0
+set shaver 2.0
 set osplatform $::tcl_platform(platform)
 set osname [string tolower $::tcl_platform(os)]
 set osbits 64

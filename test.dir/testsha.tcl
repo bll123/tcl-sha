@@ -6,6 +6,11 @@ proc htob {hex} {
 }
 
 proc runargtest { expected args } {
+  global verbose
+
+  if { $verbose } {
+    puts "runargtest: $expected $args"
+  }
   set okfail 0
   try {
     {*}$args
@@ -25,6 +30,7 @@ proc runtest { b } {
   global verbose
 
   foreach {fn} [list SHA${b}ShortMsg.rsp SHA${b}LongMsg.rsp] {
+    regsub / $fn _ fn
     puts "=== $fn"
     set fh [open $fn r]
     set have 0
@@ -32,6 +38,9 @@ proc runtest { b } {
     set fail 0
     set ok 0
     while { [gets $fh line] >= 0 } {
+      if { [regexp {^exit$} $line all len] } {
+        exit
+      }
       if { [regexp {^Len = (\d+)} $line all len] } {
         incr have
       }
@@ -54,7 +63,7 @@ proc runtest { b } {
         close $tfh
 
         if { $verbose } {
-          puts -nonewline "  test: $count"
+          puts "-- test: $count"
         }
         regsub _ $b / b
         set nmd [sha -bits ${b} -file testsha.bin]
@@ -73,11 +82,123 @@ proc runtest { b } {
         incr count
 
         if { ! $verbose } {
-          puts -nonewline [format "\r  %4d %4d %4d " \
+          puts -nonewline [format "\r  %4d ok:%4d fail:%4d " \
               $count $ok $fail]
         }
         set have 0
         file delete -force testsha.bin
+      }
+    }
+    puts ""
+    set count 0
+    set fail 0
+    set ok 0
+    close $fh
+  }
+
+  foreach {fn} [list HMAC.rsp] {
+    set fh [open $fn r]
+    set have 0
+    set count 0
+    set fail 0
+    set ok 0
+    set havelen 0
+    while { [gets $fh line] >= 0 } {
+      if { [regexp {^exit$} $line all len] } {
+        exit
+      }
+      if { [regexp {^\[L=(\d+)\]$} $line all len] } {
+        set havelen 0
+        set have 0
+        if { $len == 28 && $b eq "224" } {
+          incr havelen
+        }
+        if { $len == 32 && $b eq "256" } {
+          incr havelen
+        }
+        if { $len == 48 && $b eq "384" } {
+          incr havelen
+        }
+        if { $len == 64 && $b eq "512" } {
+          incr havelen
+        }
+        if { $havelen } {
+          puts "=== $b $fn"
+        }
+      }
+      if { [regexp {^Tlen = (\w+)} $line all testlen] } {
+        incr have
+        set testlen [expr {$testlen * 2}]
+      }
+      if { [regexp {^Key = (\w+)} $line all tkey] } {
+        incr have
+      }
+      if { [regexp {^Msg = (\w+)} $line all tmsg] } {
+        incr have
+      }
+      if { [regexp {^Mac = (\w+)} $line all mac] } {
+        incr have
+        if { $have != 4 } {
+          set have 0
+        }
+      }
+      if { $havelen == 1 && $have == 4 } {
+        set key [htob $tkey]
+
+        set tfh [open testkey.bin w]
+        fconfigure $tfh -translation binary -encoding binary
+        if { $len > 0 } {
+          puts -nonewline $tfh $key
+        }
+        close $tfh
+
+        set msg [htob $tmsg]
+
+        set tfh [open testsha.bin w]
+        fconfigure $tfh -translation binary -encoding binary
+        if { $len > 0 } {
+          puts -nonewline $tfh $msg
+        }
+        close $tfh
+
+        if { $verbose } {
+          puts "-- test: $count"
+        }
+        regsub _ $b / b
+        try {
+          set nmac [sha -bits ${b} -keyfile testkey.bin -mac hmac -file testsha.bin]
+        } on error {err res} {
+          puts ""
+          puts "res: $res"
+          set nmac {}
+        }
+        if { [string compare -length $testlen $nmac $mac] != 0 } {
+          incr fail
+          if { $verbose } {
+            puts "    testlen: $testlen"
+            puts "    got: $nmac"
+            puts "    exp: $mac"
+            puts "    file: fail"
+          }
+        } else {
+          incr ok
+          if { $verbose } {
+            puts "    testlen: $testlen"
+            puts "    got: $nmac"
+            puts "    exp: $mac"
+            puts "    file: ok"
+          }
+        }
+
+        incr count
+
+        if { ! $verbose } {
+          puts -nonewline [format "\r  %4d ok:%4d fail:%4d " \
+              $count $ok $fail]
+        }
+        set have 0
+#        file delete -force testsha.bin
+#        file delete -force testkey.bin
       }
     }
     puts ""
@@ -109,7 +230,7 @@ proc main { } {
   }
   if { $testb == 512 } {
     load [file join .. sha[info sharedlibextension]]
-    set tlist [list 512 384 512_224 512_256]
+    set tlist [list 512 384 512/224 512/256]
   }
 
   # backwards compatibility
@@ -124,7 +245,7 @@ proc main { } {
   runargtest fail sha -bits $testb testsha.tcl ; # no -file/-data
   runargtest fail sha -bits $testb -file ; # too few
   runargtest fail sha -bits $testb -data ; # too few
-  runargtest fail sha -bits $testb testsha.tcl ; # too few
+  runargtest fail sha -bits $testb testsha.tcl ; # incorrect usage, too few
   runargtest fail sha -bits $testb -file testsha.tcl testsha.tcl ; # too many
 
   if { $verbose } {
