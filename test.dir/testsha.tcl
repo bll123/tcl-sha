@@ -197,8 +197,8 @@ proc runtest { b } {
               $count $ok $fail]
         }
         set have 0
-#        file delete -force testsha.bin
-#        file delete -force testkey.bin
+        file delete -force testsha.bin
+        file delete -force testkey.bin
       }
     }
     puts ""
