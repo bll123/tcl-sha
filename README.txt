@@ -8,12 +8,12 @@ Changes:
     - Fixed missing cflags for 32-bit linux (large file support).
     - Cleaned up Makefile.
 
-sha-1.0.zip : binary package
+sha-2.0.zip : binary package
               Includes Linux 32 bit, Linux 64 bit,
-              MacOS 64 bit, Windows 64 bit, and Windows 32 bit.
+              MacOS 64 bit, and Windows 64 bit
               Does not include the sha-256 binaries.
 
-sha-src-1.0.zip : sources and NIST test suite.
+sha-src-2.0.zip : sources and NIST test suite.
 
 Usage:
 
