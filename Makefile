@@ -19,7 +19,7 @@ WINTGTS = sha.dll sha256.dll
 
 .PHONY: unknown
 unknown:
-	@echo "make darwin/linux/windows"
+	@echo "make darwin|linux|linux32|windows|windows32"
 
 .PHONY: darwin
 darwin:
@@ -35,7 +35,18 @@ darwintgt:
 
 .PHONY: linux
 linux:
-	$(MAKE) linuxtgt
+	$(MAKE) \
+		CFLAGS="`getconf LFS_CFLAGS`" \
+		LDFLAGS="`getconf LFS_LDFLAGS`" \
+		linuxtgt
+
+.PHONY: linux32
+linux32:
+	$(MAKE) \
+		BITS=32 \
+		CFLAGS="`getconf LFS_CFLAGS`" \
+		LDFLAGS="`getconf LFS_LDFLAGS`" \
+		linuxtgt
 
 .PHONY: linuxtgt
 linuxtgt:
@@ -47,6 +58,10 @@ linuxtgt:
 .PHONY: windows
 windows:
 	$(MAKE) windowstgt
+
+.PHONY: windows32
+windows32:
+	$(MAKE) BITS=32 windowstgt
 
 .PHONY: windowstgt
 windowstgt:
