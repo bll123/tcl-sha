@@ -5,6 +5,8 @@ Changes:
     - Added support for hmac.
     - Code cleanup.
     - Arguments no longer require a specific order.
+    - Fixed missing cflags for 32-bit linux (large file support).
+    - Cleaned up Makefile.
 
 sha-1.0.zip : binary package
               Includes Linux 32 bit, Linux 64 bit,

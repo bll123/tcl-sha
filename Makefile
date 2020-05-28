@@ -71,6 +71,7 @@ windowstgt:
 			-L../windows/${BITS}" \
 		CFLAGS="-DCOMP_WINDOWS" \
 		LDFLAGS="-static-libgcc" \
+		TCLVER=${STCLVER} \
 		$(WINTGTS)
 
 .PHONY: clean
