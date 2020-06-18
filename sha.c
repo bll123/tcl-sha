@@ -442,7 +442,7 @@ shahash (char *hsize, char *buf, size_t blen, buff_t *predata,
     /* if the buffer is getting empty, move what's left to
        the beginning and fill it up again */
     if (predata == NULL &&
-        fn != NULL &&
+        (flags & SHA_HAVEFILE) == SHA_HAVEFILE &&
         shainfo.blen - shainfo.boffset < CHARSINCHUNK) {
       i = shainfo.blen - shainfo.boffset;
       if (i > 0) {
@@ -561,10 +561,8 @@ shahash (char *hsize, char *buf, size_t blen, buff_t *predata,
 static void
 hmacpad (buff_t *key, buff_t xorvalue, buff_t *ret)
 {
-  FILE        *fh;
-
   memcpy (ret, key, CHARSINCHUNK);
-  for (int i = 0; i < CHARSINCHUNK; ++i) {
+  for (int i = 0; i < (int) CHARSINCHUNK; ++i) {
     ret[i] ^= xorvalue;
   }
 #if SHA_DEBUG
@@ -581,7 +579,6 @@ hmac (char *hsize, char *buf, size_t blen, char *inkey, size_t inklen,
   buff_t        ikey [CHARSINCHUNK];
   buff_t        okey [CHARSINCHUNK];
   buff_t        *predata;
-  buff_t        *dbuf;
   size_t        klen;
 
   memset (key, '\0', CHARSINCHUNK);
@@ -599,9 +596,6 @@ hmac (char *hsize, char *buf, size_t blen, char *inkey, size_t inklen,
     }
     stat (inkey, &statbuf);
     if ((size_t) statbuf.st_size > CHARSINCHUNK) {
-      size_t      rlen;
-      buff_t      *tbuf;
-
 #if SHA_DEBUG
       printf ("hmac: %d > %d : key by hash \n", statbuf.st_size, CHARSINCHUNK);
 #endif
@@ -612,7 +606,7 @@ hmac (char *hsize, char *buf, size_t blen, char *inkey, size_t inklen,
 #if SHA_DEBUG
       printf ("key from file\n");
 #endif
-      int flen = fread (key, 1, CHARSINCHUNK, fh);
+      fread (key, 1, CHARSINCHUNK, fh);
     }
     fclose (fh);
   } else {

@@ -2,20 +2,20 @@
 #
 #
 
-CFLAGS_OPT = -O2
+CFLAGS_OPT = -g -O2
 TCLVER = 8.6
 STCLVER = 86
 BITS=64
 
-LINUXTGTS = sha.so sha256.so
+LINUXTGTS = tsha sha.so sha256.so
 LINC = -I${HOME}/local/include
 LLIB = -L${HOME}/local/lib
 
-DARWINTGTS = sha.dylib sha256.dylib
+DARWINTGTS = tsha sha.dylib sha256.dylib
 DINC = -I${HOME}/local/include
 DLIB = -L${HOME}/local/Library/Frameworks/Tcl.Framework/Versions/$(VER)
 
-WINTGTS = sha.dll sha256.dll
+WINTGTS = tsha.exe sha.dll sha256.dll
 
 .PHONY: unknown
 unknown:
@@ -31,6 +31,7 @@ darwintgt:
 		LIBS="$(DLIB)" \
 		CFLAGS="-mmacosx-version-min=10.9" \
 		LDFLAGS="-mmacosx-version-min=10.9" \
+		EXEEXT="" \
 		$(DARWINTGTS)
 
 .PHONY: linux
@@ -53,6 +54,7 @@ linuxtgt:
 	$(MAKE) PLATFORM=linux SFX=.so \
 		INCS="$(LINC)" \
 		LIBS="$(LLIB)" \
+		EXEEXT="" \
 		$(LINUXTGTS)
 
 .PHONY: windows
@@ -72,6 +74,7 @@ windowstgt:
 		CFLAGS="-DCOMP_WINDOWS" \
 		LDFLAGS="-static-libgcc" \
 		TCLVER=${STCLVER} \
+		EXEEXT=.exe \
 		$(WINTGTS)
 
 .PHONY: clean
@@ -84,6 +87,7 @@ distclean:
 
 sha.c:			sha.h
 tclsha.c:		sha.h
+tsha.c:			sha.h
 
 # all
 .c.o:
@@ -107,3 +111,8 @@ sha256$(SFX):	tclsha.o sha256.o
 		-m${BITS} -shared -fPIC -o $@ \
 		tclsha.o sha256.o \
         	$(LIBS) -ltclstub${TCLVER}
+
+tsha$(EXEEXT):	tsha.o sha.o
+	$(CC) $(CFLAGS_OPT) $(LDFLAGS) \
+		-m${BITS} -fPIC -o $@ \
+		tsha.o sha.o
