@@ -2,7 +2,7 @@
 #
 #
 
-CFLAGS_OPT = -g -O2
+CFLAGS_OPT = -O3
 TCLVER = 8.6
 STCLVER = 86
 BITS=64
@@ -79,7 +79,7 @@ windowstgt:
 
 .PHONY: clean
 clean:
-	@-rm -f *.o *.so *.dylib *.dll *.exe *~ test.dir/*~
+	@-rm -f *.o *.so *.dylib *.dll *.exe tsha *~ test.dir/*~
 
 .PHONY: distclean
 distclean:
