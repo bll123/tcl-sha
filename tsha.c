@@ -24,6 +24,19 @@ main (int argc, char *argv[]) {
   int       flags;
   size_t    rlen;
 
+  if (argc < 3) {
+    fprintf (stderr, "usage: %s {512|512/256|512/224|384} {-file <file>|<data>}\n", argv[0]);
+    exit (1);
+  }
+
+  if ( strcmp (argv[1], "512") != 0 &&
+      strcmp (argv[1], "512/256") != 0 &&
+      strcmp (argv[1], "512/224") != 0 &&
+      strcmp (argv[1], "384") != 0 ) {
+    fprintf (stderr, "usage: %s {512|512/256|512/224|384} {-file <file>|<data>}\n", argv[0]);
+    exit (1);
+  }
+
   sz = argv[1];
   flags = 0;
   flags |= SHA_HAVEBITS;
