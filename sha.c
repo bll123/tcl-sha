@@ -290,8 +290,15 @@ typedef struct {
 static void
 dump (char *msg, buff_t *buf, size_t len)
 {
-  printf ("%s: ", msg);
+  printf ("%s:\n", msg);
   for (int i = 0; i < len; ++i) {
+    if (i != 0 && i % 32 == 0) {
+      printf ("\n");
+    } else {
+      if (i != 0 && i % sizeof(hash_t) == 0) {
+        printf (" ");
+      }
+    }
     printf ("%02x", buf[i]);
   }
   printf ("\n");
