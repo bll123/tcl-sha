@@ -1,5 +1,6 @@
 /*
  * Copyright 2018 Brad Lanam Walnut Creek CA
+ * Copyright 2020 Brad Lanam Pleasant Hill CA
  */
 #ifndef _INC_SHA_H
 #define _INC_SHA_H

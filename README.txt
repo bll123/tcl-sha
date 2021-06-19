@@ -1,6 +1,10 @@
 Version 2.0
 
 Changes:
+  2.0.1
+    - Fixed pkgIndex.tcl for Windows.
+    - Repackaging only.  The sha version number is still 2.0.
+
   2.0
     - Added support for hmac.
     - Code cleanup.

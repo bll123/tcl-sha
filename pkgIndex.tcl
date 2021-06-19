@@ -8,6 +8,7 @@ if { $::tcl_platform(wordSize) == 4 } {
   set osbits 32
 }
 if { $osplatform eq "windows" } {
+  set osname windows
   set osbits 32
   set k {ProgramFiles(x86)}
   if { [info exists ::env($k)] } {

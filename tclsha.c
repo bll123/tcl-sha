@@ -38,6 +38,7 @@ shaObjCmd (
   int               argidx;
   int               argcount;
   int               havemac;
+  int               rettype;
   int               flags;
   size_t            msz;
   char              dstr [SHA_DIGESTSIZE];
@@ -89,7 +90,7 @@ shaObjCmd (
         if (argidx < objc) {
           dbuf = Tcl_GetStringFromObj (objv[argidx], &len);
           flags |= SHA_HAVEDATA;
-          msz = (size_t) len;
+          msz = len;
         }
       } else if (strcmp (buf, "-key") == 0) {
         ++argidx;
@@ -127,7 +128,7 @@ shaObjCmd (
       } else if (argcount == 1) {
         dbuf = Tcl_GetStringFromObj (objv[argidx], &len);
         flags |= SHA_HAVEDATA;
-        msz = (size_t) len;
+        msz = len;
         ++argcount;
       } else {
         Tcl_WrongNumArgs (interp, 1, objv, usagestr);
@@ -174,7 +175,7 @@ Sha_Init (Tcl_Interp *interp)
   }
 
   Tcl_CreateObjCommand (interp, "sha", shaObjCmd, NULL, NULL);
-  Tcl_PkgProvide (interp, "sha", "2.0");
-  Tcl_PkgProvide (interp, "sha256", "2.0");
+  Tcl_PkgProvide (interp, "sha", "2.0.1");
+  Tcl_PkgProvide (interp, "sha256", "2.0.1");
   return TCL_OK;
 }
