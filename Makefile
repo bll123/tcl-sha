@@ -84,6 +84,8 @@ clean:
 .PHONY: distclean
 distclean:
 	@$(MAKE) clean
+	@-rm -rf build
+	@-rm -f *.orig
 
 sha.c:			sha.h
 tclsha.c:		sha.h
