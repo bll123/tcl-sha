@@ -1,10 +1,15 @@
-Version 2.0
+Version 2.1
 
 Changes:
+  2.1
+    - added CMakeLists.txt for cmake build (EL)
+    - added -keyhex/-datahex for hex encoded key resp. data (EL)
+    - added -keybin/-databin for strictly binary key resp. data (EL)
+    - added -output [hex|base64|binary] option. Hex is default as before (EL)
+    - removed sha256 package provide from C code (EL)
   2.0.1
     - Fixed pkgIndex.tcl for Windows.
     - Repackaging only.  The sha version number is still 2.0.
-
   2.0
     - Added support for hmac.
     - Code cleanup.
@@ -54,6 +59,26 @@ Usage:
   set hmac [sha -bits 256 -keyfile pkgIndex.tcl -mac hmac -file pkgIndex.tcl]
 
 Building:
+
+Using cmake (recommended):
+
+  1. install tcl-devel and cmake for your platform
+  2. To build in the "build" directory:
+
+    mkdir -p build && cd build
+    cmake ..
+
+    # for unix/linux/darwin
+    make
+
+    # for windows, requires the MSVC command prompt
+    msbuild tcl-sha.sln /property:Configuration=Release
+
+Using make:
+
+unix/darwin:
+    make
+
   make {linux|darwin|windows}
     make linux should work for freebsd also.
 
