@@ -1,6 +1,8 @@
-Version 2.1
+Version 2.1.1
 
 Changes:
+  2.1.1
+    - minor cleanup (bll)
   2.1
     - added CMakeLists.txt for cmake build (EL)
     - added -keyhex/-datahex for hex encoded key resp. data (EL)
@@ -17,12 +19,12 @@ Changes:
     - Fixed missing cflags for 32-bit linux (large file support).
     - Cleaned up Makefile.
 
-sha-2.0.zip : binary package
+sha-2.1.1.zip : binary package
               Includes Linux 32 bit, Linux 64 bit,
-              MacOS 64 bit, and Windows 64 bit
+              MacOS 64 bit, Windows 64 bit and Windows 32 bit.
               Does not include the sha-256 binaries.
 
-sha-src-2.0.zip : sources and NIST test suite.
+sha-src-2.1.1.zip : sources and NIST test suite.
 
 Usage:
 
