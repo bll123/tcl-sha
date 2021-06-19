@@ -3,7 +3,8 @@ Version 2.1
 Changes:
   2.1
     - added CMakeLists.txt for cmake build
-    - Added support for hex encoded key data with flag -keyhex
+    - added -keyhex/-datahex for hex encoded key resp. data
+    - added -keybin/-databin for strictly binary key resp. data
     - removed sha256 package provide from C code
   2.0
     - Added support for hmac.

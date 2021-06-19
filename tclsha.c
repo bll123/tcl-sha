@@ -66,6 +66,17 @@ static int hexs2bin(const char* hex, char** out, int* doFree)
     return len;
 }
 
+static int convert_to_binary(Tcl_Obj* tclObj, char** bufOut, int* doFree) {
+    int i = 0;
+    int len;
+    Tcl_UniChar* uniStr = Tcl_GetUnicodeFromObj(tclObj, &len);
+    *bufOut = ckalloc(len);
+    *doFree = 1;
+    for (i = 0; i < len; i++) {
+        (*bufOut)[i] = (char)uniStr[i];
+    }
+    return len;
+}
 
 static int
 shaObjCmd (
@@ -77,6 +88,7 @@ shaObjCmd (
 {
   char              *buf;         /* temporary string buffer            */
   char              *dbuf;        /* data buffer                        */
+  int               dataDynAlloc = 0; /* if -datahex is specified, the memory for data is ckalloc'ed and must be ckfree'd at the end. This flag takes care about that */
   char              *key;         /* key data specified by -key (hmac)  */
   int               keyDynAlloc = 0; /* if -keyhex is specified, the memory for key is ckalloc'ed and must be ckfree'd at the end. This flag takes care about that */
   char              *fn;          /* filename specified by -file        */
@@ -134,6 +146,7 @@ shaObjCmd (
         if (argidx < objc) {
           fn = Tcl_GetStringFromObj (objv[argidx], &len);
           flags |= SHA_HAVEFILE;
+          msz = len;
         }
       } else if (strcmp (buf, "-data") == 0) {
         ++argidx;
@@ -142,13 +155,32 @@ shaObjCmd (
           flags |= SHA_HAVEDATA;
           msz = len;
         }
-      }
-      else if (strcmp(buf, "-key") == 0) {
+      } else if (strcmp(buf, "-databin") == 0) {
+          ++argidx;
+          if (argidx < objc) {
+              msz = convert_to_binary(objv[argidx], &dbuf, &dataDynAlloc);
+              flags |= SHA_HAVEDATA;
+          }
+      } else if (strcmp(buf, "-datahex") == 0) {
+          ++argidx;
+          if (argidx < objc) {
+              int dhexlen = 0;
+              char* dhex = Tcl_GetStringFromObj(objv[argidx], &dhexlen);
+              msz = hexs2bin(dhex, &dbuf, &dataDynAlloc);
+              flags |= SHA_HAVEDATA;
+          }
+      } else if (strcmp(buf, "-key") == 0) {
         ++argidx;
         if (argidx < objc) {
           key = Tcl_GetStringFromObj(objv[argidx], &klen);
           havemac += 1;
         }
+      } else if (strcmp(buf, "-keybin") == 0) {
+          ++argidx;
+          if (argidx < objc) {
+              klen = convert_to_binary(objv[argidx], &key, &keyDynAlloc);
+              havemac += 1;
+          }
       } else if (strcmp(buf, "-keyhex") == 0) {
         ++argidx;
         if (argidx < objc) {
@@ -164,12 +196,12 @@ shaObjCmd (
           havemac += 1;
           flags |= SHA_KEYISFILE;
         }
-      } else if (strcmp (buf, "-mac") == 0) {
+      } else if (strcmp(buf, "-mac") == 0) {
         ++argidx;
         if (argidx < objc) {
-          buf = Tcl_GetStringFromObj (objv[argidx], &len);
-          if (strcmp (buf, "hmac") != 0) {
-            Tcl_WrongNumArgs (interp, 1, objv, usagestr);
+          buf = Tcl_GetStringFromObj(objv[argidx], &len);
+          if (strcmp(buf, "hmac") != 0) {
+            Tcl_WrongNumArgs(interp, 1, objv, usagestr);
             rc = TCL_ERROR;
             goto cleanupFinish;
           }
@@ -216,7 +248,7 @@ shaObjCmd (
   }
 
   if (havemac == 2) {
-    rc = hmac (sz, dbuf, (size_t) len, key, (size_t) klen, fn, flags, dstr, &dlen);
+    rc = hmac (sz, dbuf, (size_t) msz, key, (size_t) klen, fn, flags, dstr, &dlen);
   } else {
     rc = shahash (sz, dbuf, (size_t) msz, NULL, fn, flags, dstr, &dlen);
   }
@@ -231,6 +263,9 @@ shaObjCmd (
 cleanupFinish:
   if (keyDynAlloc) {
       ckfree(key);
+  }
+  if (dataDynAlloc) {
+      ckfree(dbuf);
   }
   return rc;
 }
