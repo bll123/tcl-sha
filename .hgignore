@@ -1,4 +1,9 @@
-z.sh
+syntax: regexp
+^copy\.sh$
+^push\.sh$
 build/
-un~
-.swp
+Archive/
+\.swp$
+\.orig$
+^sha-.*\.zip$
+.*~$
