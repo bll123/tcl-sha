@@ -1,6 +1,7 @@
 /*
  * Copyright 2018 Brad Lanam Walnut Creek, CA
  * Copyright 2020 Brad Lanam Pleasant Hill, CA
+ * Copyright 2021 Eckhard Lehmann Norderstedt Germany
  *
  * HMAC reference:
  *   https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.198-1.pdf
@@ -182,7 +183,6 @@ shaObjCmd (
   int               argidx;
   int               argcount;
   int               havemac;
-  int               rettype;
   int               flags;
   size_t            msz;
   char              dstr [SHA_DIGESTSIZE];
@@ -236,7 +236,7 @@ shaObjCmd (
         if (argidx < objc) {
           dbuf = Tcl_GetStringFromObj (objv[argidx], &len);
           flags |= SHA_HAVEDATA;
-          msz = len;
+          msz = (size_t) len;
         }
       } else if (strcmp(buf, "-databin") == 0) {
           ++argidx;
@@ -313,7 +313,7 @@ shaObjCmd (
       } else if (argcount == 1) {
         dbuf = Tcl_GetStringFromObj (objv[argidx], &len);
         flags |= SHA_HAVEDATA;
-        msz = len;
+        msz = (size_t) len;
         ++argcount;
       } else {
         Tcl_WrongNumArgs (interp, 1, objv, usagestr);
@@ -407,6 +407,6 @@ Sha_Init (Tcl_Interp *interp)
   }
 
   Tcl_CreateObjCommand (interp, "sha", shaObjCmd, NULL, NULL);
-  Tcl_PkgProvide (interp, "sha", "2.1");
+  Tcl_PkgProvide (interp, "sha", "2.1.1");
   return TCL_OK;
 }

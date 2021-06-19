@@ -1,6 +1,7 @@
 /*
  * Copyright 2018 Brad Lanam Walnut Creek CA
- * Copyright 2020 Brad Lanam Pleasant Hill CA
+ * Copyright 2020-2021 Brad Lanam Pleasant Hill CA
+ * Copyright 2021 Eckhard Lehmann Norderstedt Germany
  *
  * https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/shs/shabytetestvectors.zip
  */
