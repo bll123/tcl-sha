@@ -1,4 +1,4 @@
-set shaver 2.0
+set shaver 2.1
 set osplatform $::tcl_platform(platform)
 set osname [string tolower $::tcl_platform(os)]
 set osbits 64
@@ -18,9 +18,6 @@ if { $osplatform eq "windows" } {
 package ifneeded sha ${shaver} \
     [list load [file join $dir ${osname}${osbits} \
     sha[info sharedlibextension]]]
-package ifneeded sha256 ${shaver} \
-    [list load [file join $dir ${osname}${osbits} \
-    sha256[info sharedlibextension]]]
 
 unset -nocomplain osbits
 unset -nocomplain osplatform
