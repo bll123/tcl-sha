@@ -5,6 +5,7 @@ Changes:
     - added CMakeLists.txt for cmake build
     - added -keyhex/-datahex for hex encoded key resp. data
     - added -keybin/-databin for strictly binary key resp. data
+    - added -output [hex|base64|binary] option. Hex is default as before
     - removed sha256 package provide from C code
   2.0
     - Added support for hmac.
