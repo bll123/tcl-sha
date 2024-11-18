@@ -1,0 +1,9 @@
+syntax: regexp
+^copy\.sh$
+^push\.sh$
+build/
+Archive/
+\.swp$
+\.orig$
+^sha-.*\.zip$
+.*~$
