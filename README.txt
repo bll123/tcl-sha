@@ -1,5 +1,5 @@
 2024-11-18
-bll: I no longer maintain tcl-sha.  Please contact Erik Leunissen.
+bll: I no longer maintain tcl-sha.  Please contact Eckhard Lehmann.
 
 Version 2.1.1
 
